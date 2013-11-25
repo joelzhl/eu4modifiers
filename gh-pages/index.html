@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="generator"
+    content="HTML Tidy for HTML5 (experimental) for Windows https://github.com/w3c/tidy-html5/tree/c63cc39" />
+    <meta charset="utf-8" />
+    <title>Europa Universalis 4 Modifier Lookup</title>
+    <link href="css/custom-theme/jquery-ui-1.10.3.custom.css" rel="stylesheet" />
+    <link href="css/default.css" rel="stylesheet" />
+    <script src="js/jquery-1.9.1.js"></script>
+<!--     <script src="js/jquery-ui-1.10.3.custom.js"></script> -->
+	<script>
+	var mods = [];
+	var local_data;
+	var data_eu4mod;
+		
+	function populateLocalization(loc, refresh) {
+		$.getJSON("js/data/" + loc +".json", function(loc_data) {
+			local_data = loc_data;
+			if (refresh)
+				refreshRight();
+		});
+	}
+	
+	function refreshRight() {
+		$("#modifiers").empty();
+		var mod = $(".ui-selected")[0].id;
+		var nameList = mods[mod];
+		var colorPositive = data_eu4mod[mod][0] ? "green-modifier" : "red-modifier";
+		var colorNegative = data_eu4mod[mod][0] ? "red-modifier" : "green-modifier";
+		var convertPercent = (data_eu4mod[mod][1] == "percentage");
+		var isText = (data_eu4mod[mod][1] == "text");
+		var locList = [];
+		$.each(nameList, function(path, val) {
+			path = path.split("|");
+			for (var i = 0; i < path.length; i++) {
+				if (local_data[path[i]]) {
+					path[i] = local_data[path[i]];
+				} else if (local_data[path[i] + "_title"]) {
+					path[i] = local_data[path[i] + "_title"];
+				}
+			}
+			var sec = path[0];
+			path[0] = val;
+			if (locList[sec] != null) {
+				locList.length = locList[sec].push(path);
+			} else {
+				locList[sec] = [ path ];
+			}
+		});
+		
+		for (var section in locList) {
+			var list = "<div class='right-panel-content ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom ui-state-active'>";
+			for (var i in locList[section]) {
+				var value = locList[section][i][0];
+				var valuePrint = convertPercent ? ((value * 100) + "%") : value;
+				valuePrint = isText ? valuePrint.toUpperCase() : valuePrint;
+				list += "<p><span class='" + 
+					((value < 0) ? (colorNegative + "'>") : (colorPositive + "'>" + (isText ? "" : "+"))) +
+					valuePrint + "</span><div>" +
+					locList[section][i].slice(1).join(" - ") + "<div></p>";
+			}
+			$("#modifiers").append(
+				"<h3 class='right-panel-header ui-accordion-header ui-helper-reset ui-state-default ui-corner-all ui-accordion-icons ui-state-active'>" + section + "</h3>"
+			).append(
+				list + "</div>"
+			);
+		}
+	}
+	
+	$(function() {
+		function refreshList(e) {
+			$.each($("#selectable li"), function(key, val) {
+				if (val.innerHTML.indexOf(e.target.value) != -1) {
+					$(this).removeClass("select-hide");
+				} else {
+					$(this).addClass("select-hide");
+				}
+			});
+		}
+		$("#search").bind('input', refreshList);
+		
+		$.getJSON("js/data/mod_name_pairs.json", function(data_mnp) {
+			$.each(data_mnp, function(key, val) {
+				$("<li/>", {
+					"class": "ui-widget-content",
+					html: key,
+					id: key
+				}).appendTo("#selectable");
+				mods[key] = val;
+			});
+		
+			$.getJSON("js/data/eu4mod.json", function(data_eu4m) {
+				populateLocalization("l_english", false);
+				data_eu4mod = data_eu4m;
+				// generate stuff after we got the data
+				$("#selectable li").each( function() {
+					$(this).click( function(obj) {
+						$("#selectable li").removeClass("ui-selected");
+						$(this).addClass("ui-selected");
+						
+						refreshRight();
+					});
+				});
+			});
+		});
+	});
+	</script>
+	</head>
+	<body>
+	<div class="header-wrapper">
+		<div id="header">
+			<div class="left-panel">
+				<h1>EU4 Modifier Lookup</h1>
+				<h3>-by joelzhl</h3>
+			</div>
+			<div class="right-panel">
+				<a onclick="populateLocalization('l_english', true);"><img src="images/l_english.gif" /></a>
+				<a onclick="populateLocalization('l_german', true);"><img src="images/l_german.gif" /></a>
+				<a onclick="populateLocalization('l_french', true);"><img src="images/l_french.gif" /></a>
+				<a onclick="populateLocalization('l_spanish', true);"><img src="images/l_spanish.gif" /></a>
+			</div>
+		</div>
+	</div>
+	<div id="contents">
+		<div class="ui-widget left-panel">
+			<input id="search" />
+			<div class="select_wrapper">
+				<ol id="selectable"></ol>
+			</div>
+		</div>
+		<div id="modifiers" class="ui-accordion ui-widget">
+		</div>
+	</div>
+  </body>
+</html>
